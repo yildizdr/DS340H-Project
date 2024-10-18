@@ -1,0 +1,65 @@
+---
+title: "DS340H HW6 - Project Data Exploration"
+author: "Yildiz Derinkok"
+date: 
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(lubridate)
+library(dplyr)
+setwd("/Users/ozgecankocak/Downloads/Fall 24/DS 340H/Week 6")
+```
+
+
+## Create dataframe with variables of interest
+
+For activity file, keep variables: TEWHERE, TUCUMDUR (duration of activity in mins), TUSTARTTIM, TUSTOPTIME, TUCASEID.
+
+For respondent file, keep variables: TELFS (employment status), TRDTOCC1 (industry code of job), TROHHCHILD (if they have kids), TESCHENR (if they are in school), TUDIARYDATE, TUCASEID
+
+```{r}
+df_act <- read.delim("atusact_0323.dat", sep=",")
+df_resp <- read.delim("atusresp_0323.dat", sep=",")
+
+df_act <- df_act[c("TUCASEID", "TEWHERE", "TUCUMDUR", "TUSTARTTIM", "TUSTOPTIME")]
+df_resp <- df_resp[c("TUCASEID", "TUDIARYDATE", "TELFS", "TRDTOCC1", "TROHHCHILD", "TESCHENR")]
+
+df <- merge(df_act, df_resp, by="TUCASEID") #merge dataframes
+```
+
+
+## Clean Data
+
+```{r}
+# Clean date variables
+df$TUSTARTTIM <- hms(df$TUSTARTTIM)
+df$TUSTOPTIME <- hms(df$TUSTOPTIME)
+df$TUDIARYDATE <- ymd(df$TUDIARYDATE)
+
+# Only keep activities where people are outside the home
+df <- df[df$TEWHERE != 1,] #1: at home or yard
+df <- df[df$TEWHERE != -1,] #-1: where info not collected
+
+# Calculate total time spent outside for each person
+#d <- df %>%
+#  group_by(df$TUCASEID) %>%
+#  sum(df$TUCUMDUR)
+
+# Calculate median time spent outside for each date
+
+
+```
+
+
+
+
+
+
