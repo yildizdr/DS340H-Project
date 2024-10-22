@@ -39,10 +39,3 @@ d <- df %>%
 # Calculate median time spent outside for each date
 
 
-
-
-
-
-
-
-
