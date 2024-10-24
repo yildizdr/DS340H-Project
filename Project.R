@@ -56,7 +56,6 @@ d_date <- d %>%
   select(TUDIARYDATE, MedMins, MedHrs) %>% 
   distinct()
 
-
 # Dataset with median time by YearMo
 d_yearmo <- d %>%
   group_by(YearMo) %>%
@@ -65,6 +64,13 @@ d_yearmo <- d %>%
   select(YearMo, MedMins, MedHrs) %>% 
   distinct()
 
+# Dataset with median time by Year
+d_year <- d %>%
+  group_by(Year) %>%
+  mutate(MedMins = median(TotalMins)) %>%
+  mutate(MedHrs = median(TotalHrs)) %>%
+  select(Year, MedMins, MedHrs) %>% 
+  distinct()
 
 
 ####### Visualizations #########
@@ -85,5 +91,9 @@ plot(d_date$TUDIARYDATE[d_date$TUDIARYDATE < "2022-01-01" & d_date$TUDIARYDATE >
 plot(d_yearmo$YearMo, d_yearmo$MedHrs, main = "Med. Hours Spent Outside by Date", 
      xlab = "Date (2003-2023)", ylab = "Median hours spent outside")
 
+
+## By Year
+plot(d_year$Year, d_year$MedHrs, main = "Med. Hours Spent Outside by Date", 
+     xlab = "Date (2003-2023)", ylab = "Median hours spent outside")
 
 
