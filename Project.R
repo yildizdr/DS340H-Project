@@ -17,16 +17,17 @@ df_resp <- read.delim("atusresp_0323.dat", sep=",")
 df_ros <- read.delim("atusrost_0323.dat", sep=",")
 df_cps <- read.delim("atuscps_0323.dat", sep=",")
 
-# Get variables of interest from roster file ???????????????? (rerun df_ros efore running this code)
-#df_household <- df_ros %>%
-#  select(TUCASEID, TULINENO, TEAGE) %>%
-#  group_by(TUCASEID, TULINENO) %>%
-#  spread(TULINENO, TEAGE) %>%
-#  rowwise() %>%
-#  mutate(Over65 = if_else(any(across(everything()) > 64), 1, 0)) %>%
-#  mutate(Under13 = if_else(any(across(everything()) < 14), 1, 0))
+# Get variables of interest from roster file
+df_ros$O65 <- df_ros$TEAGE > 64
+df_ros$U13 <- df_ros$TEAGE < 14
+df_household <- df_ros %>%
+  group_by(TUCASEID) %>%
+  summarize(O651 = mean(O65), U131 = mean(U13))
 
-#df_ros <- merge(df_ros, df_household, by="TUCASEID") #add the new vars to df_ros
+df_household$HOver65 <- df_household$O651 > 0
+df_household$HUnder13 <- df_household$U131 > 0
+
+df_ros <- merge(df_ros, df_household, by="TUCASEID") #add the new vars to df_ros
 
 
 # Create Data frames with variables of interest
@@ -36,7 +37,7 @@ df_cps <- df_cps[df_cps$TULINENO == 1,] #only get interview respondents
 df_cps <- df_cps[c("TUCASEID", "TULINENO", "PEMARITL", "GESTFIPS", "GEREG", "HRNUMHOU")]
 #length(unique(df_cps$TUCASEID)) #cps data has more households than act, resp, and ros (they have 245139)
 df_ros <- df_ros[df_ros$TULINENO == 1,] #only get interview respondents
-df_ros <- df_ros[c("TUCASEID", "TEAGE", "TESEX")]
+df_ros <- df_ros[c("TUCASEID", "TEAGE", "TESEX", "HOver65", "HUnder13")]
 
 # Merge data frames
 df_merge1 <- merge(df_act, df_resp, by="TUCASEID") 
@@ -61,6 +62,18 @@ df <- df %>%
   mutate(TotalMins = sum(TUACTDUR24))
 
 df$TotalHrs = df$TotalMins / 60
+
+# Clean categorical vars
+df$JobCat <- as.factor(df$TRDTOCC1)
+df$HUnder18 <- df$TROHHCHILD == 1
+df$School <- df$TESCHENR == 1
+df$TESEX <- ifelse(df$TESEX == 1, "Male", "Female")
+df$EmployStat <- as.factor(df$TELFS)
+df$Married <- df$PEMARITL == 1
+
+# Clean location vars
+df$Region <- as.factor(df$GEREG)
+df$State <- as.factor(df$GESTFIPS)
 
 
 ### Add new Variables ###
@@ -98,7 +111,8 @@ df$Weekend <- if_else((df$DayofWeek == "Sat" | df$DayofWeek == "Sun"), 1, 0)
 
 # Get dataset for each person
 d <- df %>%
-  select (-c(TEWHERE, TUACTDUR24, TUSTARTTIM, TUSTOPTIME, TUCUMDUR24)) %>%
+  select (-c(TEWHERE, TUACTDUR24, TUSTARTTIM, TUSTOPTIME, TUCUMDUR24, TULINENO, TotalMins, 
+             TELFS, TRDTOCC1, TROHHCHILD, TESCHENR, PEMARITL, GEREG, GESTFIPS)) %>%
   distinct()
 #length(unique(df$TUCASEID)) # 208715 #check if there is a row in d for each unique case id
 
@@ -106,9 +120,9 @@ d <- df %>%
 # Dataset with median time by date
 d_date <- d %>%
   group_by(TUDIARYDATE) %>%
-  mutate(MedMins = median(TotalMins)) %>%
+  #mutate(MedMins = median(TotalMins)) %>%
   mutate(MedHrs = median(TotalHrs)) %>%
-  select(TUDIARYDATE, MedMins, MedHrs) %>% 
+  select(TUDIARYDATE, MedHrs, Season, DayofWeek, Weekend, PostCovid) %>% 
   distinct()
 
 # Dataset with median time by YearMo
@@ -155,15 +169,28 @@ plot(d_year$Year, d_year$MedHrs, main = "Med. Hours Spent Outside by Date",
 
 
 ### Add other variables ###
+plot(d_date$TUDIARYDATE, d_date$MedHrs, col = as.factor(d_date$Season),
+     main = "Med. Hours Spent Outside by Date", xlab = "Date (2003-2023)", ylab = "Median hours spent outside")
 
+#cols = c("pink", "black")
+plot(d_date$TUDIARYDATE, d_date$MedHrs, col = as.factor(d_date$Weekend), #col = cols[as.factor(d_date$Weekend)]
+     main = "Med. Hours Spent Outside by Date", xlab = "Date (2003-2023)", ylab = "Median hours spent outside")
+
+lm(formula = MedHrs ~ Weekend * PostCovid, data = d_date)
 
 
 ############## Models ###############
 
+# Model with just time vars
+summary(lm(TotalHrs ~ PostCovid, data = d))
 
 summary(lm(TotalHrs ~ Days + Days2 + PostCovid + Weekend + Season, data = d))
 
+summary(lm(TotalHrs ~ Days + Days2 + PostCovid + Weekend + Season + Days*PostCovid + Days2*PostCovid, data = d))
 
+
+# Model with all variables
+summary(lm(TotalHrs ~ ., data = d))
 
 
 
