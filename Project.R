@@ -34,7 +34,7 @@ df_ros <- merge(df_ros, df_household, by="TUCASEID") #add the new vars to df_ros
 df_act <- df_act[c("TUCASEID", "TEWHERE", "TUACTDUR24", "TUSTARTTIM", "TUSTOPTIME", "TUCUMDUR24")]
 df_resp <- df_resp[c("TUCASEID", "TUDIARYDATE", "TELFS", "TRDTOCC1", "TROHHCHILD", "TESCHENR")]
 df_cps <- df_cps[df_cps$TULINENO == 1,] #only get interview respondents
-df_cps <- df_cps[c("TUCASEID", "TULINENO", "PEMARITL", "GESTFIPS", "GEREG", "HRNUMHOU")]
+df_cps <- df_cps[c("TUCASEID", "TULINENO", "PEMARITL", "GESTFIPS", "GEREG", "HRNUMHOU", "HEFAMINC", "HUFAMINC", "PTDTRACE", "HRYEAR4")]
 #length(unique(df_cps$TUCASEID)) #cps data has more households than act, resp, and ros (they have 245139)
 df_ros <- df_ros[df_ros$TULINENO == 1,] #only get interview respondents
 df_ros <- df_ros[c("TUCASEID", "TEAGE", "TESEX", "HOver65", "HUnder13")]
@@ -52,9 +52,12 @@ df$TUSTARTTIM <- hms(df$TUSTARTTIM)
 df$TUSTOPTIME <- hms(df$TUSTOPTIME)
 df$TUDIARYDATE <- ymd(df$TUDIARYDATE)
 
-# Only keep activities where people are outside the home
+# Only keep activities where people are outside the home    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#table(df$TEWHERE)
 df <- df[df$TEWHERE != 1,] #1: at home or yard
 df <- df[df$TEWHERE != -1,] #-1: where info not collected
+df <- df[df$TEWHERE != -2,] #-2: don't know
+df <- df[df$TEWHERE != -3,] #-3: refused
 
 # Calculate total time spent outside for each person
 df <- df %>%
@@ -63,6 +66,7 @@ df <- df %>%
 
 df$TotalHrs = df$TotalMins / 60
 
+
 # Clean categorical vars
 df$JobCat <- as.factor(df$TRDTOCC1)
 df$HUnder18 <- df$TROHHCHILD == 1
@@ -70,10 +74,14 @@ df$School <- df$TESCHENR == 1
 df$TESEX <- ifelse(df$TESEX == 1, "Male", "Female")
 df$EmployStat <- as.factor(df$TELFS)
 df$Married <- df$PEMARITL == 1
+df$Race <- as.factor(df$PTDTRACE)
+df$HIncome <- ifelse(df$HRYEAR4 < 2010, df$HUFAMINC, df$HEFAMINC)
+df$HIncome <- as.factor(df$HIncome)
 
 # Clean location vars
 df$Region <- as.factor(df$GEREG)
 df$State <- as.factor(df$GESTFIPS)
+
 
 
 ### Add new Variables ###
@@ -101,9 +109,9 @@ df$Season[df$Month>=9 & df$Month<12] <- "fall"
 
 #Day of the week
 df$DayofWeek <- wday(df$TUDIARYDATE, label = TRUE)
+df$DayofWeek <- factor(df$DayofWeek, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
 df$Weekend <- if_else((df$DayofWeek == "Sat" | df$DayofWeek == "Sun"), 1, 0)
 
-#Holiday Indicator ?
 
 
 
@@ -112,7 +120,8 @@ df$Weekend <- if_else((df$DayofWeek == "Sat" | df$DayofWeek == "Sun"), 1, 0)
 # Get dataset for each person
 d <- df %>%
   select (-c(TEWHERE, TUACTDUR24, TUSTARTTIM, TUSTOPTIME, TUCUMDUR24, TULINENO, TotalMins, 
-             TELFS, TRDTOCC1, TROHHCHILD, TESCHENR, PEMARITL, GEREG, GESTFIPS)) %>%
+             TELFS, TRDTOCC1, TROHHCHILD, TESCHENR, PEMARITL, GEREG, GESTFIPS, PTDTRACE, 
+             HRYEAR4, HEFAMINC, HUFAMINC)) %>%
   distinct()
 #length(unique(df$TUCASEID)) # 208715 #check if there is a row in d for each unique case id
 
@@ -122,7 +131,7 @@ d_date <- d %>%
   group_by(TUDIARYDATE) %>%
   #mutate(MedMins = median(TotalMins)) %>%
   mutate(MedHrs = median(TotalHrs)) %>%
-  select(TUDIARYDATE, MedHrs, Season, DayofWeek, Weekend, PostCovid) %>% 
+  select(TUDIARYDATE, MedHrs, Season, DayofWeek, Weekend, PostCovid, Days) %>% 
   distinct()
 
 # Dataset with median time by YearMo
@@ -147,12 +156,14 @@ d_year <- d %>%
 
 ### Just date and median time ###
 ## By TUDIARYDATE
+plot(d_date$TUDIARYDATE, d_date$MedHrs, main = "Med. Hours Spent Outside by Date", 
+     xlab = "Date (2003-2023)", ylab = "Median hours spent outside")
+
+#2003 - 2004
 plot(d_date$TUDIARYDATE[d_date$TUDIARYDATE < "2003-12-01"], d_date$MedHrs[d_date$TUDIARYDATE < "2003-12-01"], 
      main = "Med. Hours Spent Outside by Date", xlab = "Date (2003-2004)", ylab = "Median hours spent outside")
 
-plot(d_date$TUDIARYDATE, d_date$MedHrs, 
-     main = "Med. Hours Spent Outside by Date", xlab = "Date (2003-2023)", ylab = "Median hours spent outside")
-
+#2020 - 2022
 plot(d_date$TUDIARYDATE[d_date$TUDIARYDATE < "2022-01-01" & d_date$TUDIARYDATE > "2020-01-01"], 
      d_date$MedHrs[d_date$TUDIARYDATE < "2022-01-01" & d_date$TUDIARYDATE > "2020-01-01"], 
      main = "Med. Hours Spent Outside by Date", xlab = "Date (2020-2022)", ylab = "Median hours spent outside")
@@ -179,18 +190,150 @@ plot(d_date$TUDIARYDATE, d_date$MedHrs, col = as.factor(d_date$Weekend), #col = 
 lm(formula = MedHrs ~ Weekend * PostCovid, data = d_date)
 
 
+
 ############## Models ###############
 
-# Model with just time vars
-summary(lm(TotalHrs ~ PostCovid, data = d))
+### Model with just time vars
+summary(lm(TotalHrs ~ PostCovid, data = d)) 
+#worried abt independence assumption, bc residuals not independent of each other.
+#don't show this model, bc of independence issue. 
 
-summary(lm(TotalHrs ~ Days + Days2 + PostCovid + Weekend + Season, data = d))
+summary(lm(TotalHrs ~ Days + Days2 + PostCovid + DayofWeek + Season + Year + Month, data = d))
+#when you add more time variables, independence assumption is changing. more vars related to time is better
 
-summary(lm(TotalHrs ~ Days + Days2 + PostCovid + Weekend + Season + Days*PostCovid + Days2*PostCovid, data = d))
+lm.time <- lm(TotalHrs ~ Days + Days2 + PostCovid + DayofWeek + Season + Year + Month + Days*PostCovid + Days2*PostCovid, data = d)
+summary(lm.time)
 
 
-# Model with all variables
-summary(lm(TotalHrs ~ ., data = d))
+### Model with all variables
+lm.full <- lm(TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + HRNUMHOU + JobCat + 
+             HUnder18 + School + EmployStat + Married + Race + HIncome + Region + 
+             State + Year + Month + Days + Days2 + PostCovid + Season + DayofWeek +
+             Weekend, data = d) # 22 predictors
+summary(lm.full)
+
+#Add interactions for Covid for all vars
+lm.int <- lm(TotalHrs ~ TEAGE*PostCovid + TESEX*PostCovid + HOver65*PostCovid + 
+             HUnder13*PostCovid + HRNUMHOU*PostCovid + JobCat*PostCovid + 
+             HUnder18*PostCovid + School*PostCovid + EmployStat*PostCovid + 
+             Married*PostCovid + Race*PostCovid + HIncome*PostCovid + Region*PostCovid + 
+             State*PostCovid + Year*PostCovid + Month*PostCovid + Days*PostCovid + 
+             Days2*PostCovid + PostCovid + Season*PostCovid + DayofWeek*PostCovid +
+             Weekend*PostCovid, data = d) 
+summary(lm.int)
+
+
+### Variable selection by BIC
+#Selection for no interaction model
+step(lm(TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + HRNUMHOU + JobCat + 
+          HUnder18 + School + EmployStat + Married + Race + HIncome + Region + 
+          State + Year + Month + Days + Days2 + PostCovid + Season + DayofWeek +
+          Weekend, data = d), direction="both", k= log(n)) 
+
+lm.full2 <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + 
+            JobCat + HUnder18 + School + EmployStat + Married + HIncome + 
+            Year + Month + Days + Days2 + PostCovid + Season + DayofWeek + 
+            Region, data = d) # 18 vars - HRNUMHOU, Race, State, Weekend
+summary(lm.full2)
+#Days still here? State and race removed?  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+#Selection for interaction model
+step(lm(TotalHrs ~ TEAGE*PostCovid + TESEX*PostCovid + HOver65*PostCovid + 
+             HUnder13*PostCovid + HRNUMHOU*PostCovid + JobCat*PostCovid + 
+             HUnder18*PostCovid + School*PostCovid + EmployStat*PostCovid + 
+             Married*PostCovid + Race*PostCovid + HIncome*PostCovid + Region*PostCovid + 
+             State*PostCovid + Year*PostCovid + Month*PostCovid + Days*PostCovid + 
+             Days2*PostCovid + PostCovid*PostCovid + Season*PostCovid + DayofWeek*PostCovid +
+             Weekend*PostCovid, data = d), direction="both", k= log(n)) 
+
+
+lm.int2 <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+              HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+              Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+              Region + TEAGE:PostCovid + PostCovid:TESEX + PostCovid:HRNUMHOU + 
+              PostCovid:JobCat + PostCovid:School + PostCovid:Month + PostCovid:Days + 
+              PostCovid:Days2 + PostCovid:DayofWeek + PostCovid:Region, 
+              data = d) # - Race, State, Year, Weekend, HOver65:PostCovid, HUnder13:PostCovid, 
+              # HUnder18*PostCovid, EmployStat*PostCovid, Married*PostCovid, Season*PostCovid
+summary(lm.int2)
+
+
+### Model Evaluation
+BIC(lm.time) #adj R2 = 0.05706
+BIC(lm.full) #adj R2 = 0.2169
+BIC(lm.int) #adj R2 = 0.2197 
+BIC(lm.full2) #adj R2 = 0.2166
+BIC(lm.int2) #best #adj R2 = 0.219
+
+# K-fold Cross Validation  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+### Final Model vs Final model without covid   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+
+#### Draw the Models
+
+##Create new datasets for predictions
+# 46 yo white woman in a 3 person household with no kids or elders in the home. 
+# married, employed, works in management operations
+newdata <- d
+newdata$TEAGE <- mean(d$TEAGE)
+newdata$TESEX <- "Female"
+newdata$HOver65 <- FALSE
+newdata$HUnder13 <- FALSE
+newdata$HRNUMHOU <- 3
+newdata$JobCat <- as.factor(1) #Management Occupations
+newdata$HUnder18 <- FALSE
+newdata$School <- FALSE
+newdata$EmployStat <- as.factor(1) #employed
+newdata$Married <- TRUE
+newdata$Race <- as.factor(1) #white
+newdata$HIncome <- as.factor(14)
+newdata$State <- as.factor(6)
+newdata$Region <- as.factor(4)
+newdata <- subset(newdata, select = -c(TUCASEID, TotalHrs)) #drop caseid, totalhrs
+newdata <- newdata %>%
+  distinct() #just keep one row for one day
+
+#Same, but unemployed
+newdata2 <- newdata
+newdata2$EmployStat <- as.factor(2)
+newdata2$JobCat <- as.factor(-1)
+
+#Same as 1, but there is an elder in the home
+newdata3 <- newdata
+newdata3$HOver65 <- TRUE
+
+#Same as 1, but person is 65
+
+
+
+## Plot Time model
+# do i make a spline? the lines are really ugly  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+plot(newdata$Days, predict(lm.time, newdata = newdata))
+
+plot(d_date$Days, d_date$MedHrs, col = "lightblue")
+points(newdata$Days, predict(lm.time, newdata = newdata), type = "l")
+
+
+## Plot final model
+plot(newdata$Days, predict(lm.int2, newdata = newdata))
+plot(newdata$Days, predict(lm.int2, newdata = newdata), type = "l")
+
+plot(d_date$Days, d_date$MedHrs, col = "lightblue")
+points(newdata$Days, predict(lm.int2, newdata = newdata))
+points(newdata$Days, predict(lm.int2, newdata = newdata2), col = "red")
+
+
+
+
+#figure out why weekday is weird. what is ordered factor? try reg with just that var
+#race? 
 
 
 
