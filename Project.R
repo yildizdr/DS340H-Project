@@ -317,16 +317,16 @@ newdata3$HOver65 <- TRUE
 # do i make a spline? the lines are really ugly  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 plot(newdata$Days, predict(lm.time, newdata = newdata))
 
-plot(d_date$Days, d_date$MedHrs, col = "lightblue")
-points(newdata$Days, predict(lm.time, newdata = newdata), type = "l")
+plot(d_date$Days, d_date$MedHrs)
+points(newdata$Days, predict(lm.time, newdata = newdata), type = "l", col = "lightblue")
 
 
 ## Plot final model
 plot(newdata$Days, predict(lm.int2, newdata = newdata))
 plot(newdata$Days, predict(lm.int2, newdata = newdata), type = "l")
 
-plot(d_date$Days, d_date$MedHrs, col = "lightblue")
-points(newdata$Days, predict(lm.int2, newdata = newdata))
+plot(d_date$Days, d_date$MedHrs, xlab = "Days since January 1, 2023", ylab = "Hours spent outside")
+points(newdata$Days, predict(lm.int2, newdata = newdata), col = "lightblue")
 points(newdata$Days, predict(lm.int2, newdata = newdata2), col = "red")
 
 
