@@ -9,7 +9,7 @@ library(dplyr)
 library(tidyr)
 library(caret)
 
-############## Create data frame ##############
+############################### Create data frame ###############################
 
 # Load data
 df_act <- read.delim("atusact_0323.dat", sep=",")
@@ -45,7 +45,7 @@ df_merge2 <- merge(df_merge1, df_ros, by="TUCASEID")
 df <- merge(df_merge2, df_cps, by="TUCASEID")
 
 
-############## Data Cleaning ###############
+############################### Data Cleaning ##################################
 
 # Clean date variables
 df$TUSTARTTIM <- hms(df$TUSTARTTIM)
@@ -93,7 +93,8 @@ df$Season[df$Month>=9 & df$Month<12] <- "fall"
 
 #Day of the week
 df$DayofWeek <- wday(df$TUDIARYDATE, label = TRUE)
-df$DayofWeek <- factor(df$DayofWeek, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+df$DayofWeek <- as.character(df$DayofWeek)
+df$DayofWeek <- as.factor(df$DayofWeek)
 df$Weekend <- if_else((df$DayofWeek == "Sat" | df$DayofWeek == "Sun"), 1, 0)
 
 
@@ -186,7 +187,7 @@ length(d$Weekend[d$Weekend == 1])/length(d$Weekend)
 
 
 
-############## Visualizations ################
+############################## Visualizations #################################
 
 ### Just date and median time ###
 ## By TUDIARYDATE
@@ -224,7 +225,7 @@ lm(formula = MedHrs ~ Weekend * PostCovid, data = d_date)
 
 
 
-############## Models ###############
+################################## Models #####################################
 
 ### Model with just time vars
 summary(lm(TotalHrs ~ PostCovid, data = d)) 
@@ -341,7 +342,89 @@ model4 #lm.nocovid
 
 
 
-############## Hypothesis Testing ###############
+########################## Hypothesis Testing ###############################
+### Test Significance of Categorical Variables
+#Season
+lm.noseason <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                Married + HIncome + Month + Days + Days2 + DayofWeek + 
+                Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d)
+anova(lm.int2, lm.noseason) #significant
+lm.nocovseason <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + 
+      HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                   Married + HIncome + Month + Days + Days2 + DayofWeek + 
+                   Region, data = d)
+anova(lm.nocovid, lm.nocovseason) #sig
+
+#Day of Week
+lm.noweekday <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                Married + HIncome + Month + Days + Days2 + Season + 
+                Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                PostCovid:Days + PostCovid:Days2, data = d)
+anova(lm.int2, lm.noweekday) #sig
+lm.nocovweekday <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + 
+                   HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                   Married + HIncome + Month + Days + Days2 + Season + 
+                   Region, data = d)
+anova(lm.nocovid, lm.nocovweekday) #sig
+
+#Region
+lm.noregion <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d)
+anova(lm.int2, lm.noregion) #sig
+lm.nocovregion <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + 
+                   HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                   Married + HIncome + Month + Days + Days2 + Season + DayofWeek, data = d)
+anova(lm.nocovid, lm.nocovregion) #sig
+
+#Employment Status
+lm.noemployment <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + 
+                Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d)
+anova(lm.int2, lm.noemployment) #sig
+lm.nocovemployment <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + 
+                   HRNUMHOU + JobCat + HUnder18 + School + 
+                   Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                   Region, data = d) #sig
+anova(lm.nocovid, lm.nocovemployment)
+
+#Job Category
+lm.nojobcat <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                HUnder13 + HRNUMHOU + HUnder18 + School + EmployStat + 
+                Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                Region + TEAGE:PostCovid + PostCovid:HRNUMHOU  + 
+                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d)
+anova(lm.int2, lm.nojobcat) #sig
+lm.nocovjobcat <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + 
+                   HRNUMHOU + HUnder18 + School + EmployStat + 
+                   Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                   Region, data = d)
+anova(lm.nocovid, lm.nocovjobcat) #sig
+
+#Household Income
+lm.nohinc <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                  HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                  Married + Month + Days + Days2 + Season + DayofWeek + 
+                  Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                  PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d)
+anova(lm.int2, lm.nohinc) #sig
+lm.nocovhinc <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 + 
+                     HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                     Married + Month + Days + Days2 + Season + DayofWeek + 
+                     Region, data = d)
+anova(lm.nocovid, lm.nocovhinc) #sig
+
+#Residual plot
+scatter.smooth(residuals(lm.int2)~predict(lm.int2), xlab= "Y.hat", ylab= "Residuals")
+
+
 
 ### Final Model vs Final model without covid 
 anova(lm.int2, lm.nocovid) 
@@ -353,6 +436,28 @@ anova(lm.int2, lm.nocovid)
 #could ask model what it would predict if there wasn't covid. what the previous trend would predict.
 #refit model up until march 2020, make predictions for now. 
 #can omit mar 2020-nov 23: see if covid predictor is significant.
+
+d_precovid <- d[d$TUDIARYDATE < "2020-03-01" | d$TUDIARYDATE > "2023-11-30",]
+
+lm.precovid2 <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d_precovid)
+lm.precovid <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + 
+                    HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                    Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                    Region, data = d_precovid)
+summary(lm.precovid)
+
+plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), type = "l", ylim = c(0, 19))
+#points(newdata$TUDIARYDATE, predict(lm.nocovid, newdata = newdata), type = "l", ylim = c(0, 19))
+points(newdata$TUDIARYDATE, predict(lm.precovid, newdata = newdata), type = "l", ylim = c(0, 19), lty = 2)
+
+
+plot(newdata$TUDIARYDATE, predict(lm.precovid2, newdata = newdata), type = "l", ylim = c(0, 19), lty = 2)
+#plot(newdata$TUDIARYDATE[newdata$TUDIARYDATE > "2023-11-30"], predict(lm.precovid, newdata = newdata[newdata$TUDIARYDATE > "2023-11-30",]), type = "l", ylim = c(0, 19), lty = 2)
+
 
 
 
@@ -381,150 +486,168 @@ newdata <- newdata %>%
   distinct() #just keep one row for one day
 newdata <- newdata[newdata$DayofWeek == 'Wed',] #only include Wednesdays
 
-#Person 1, but unemployed
-newdata.unemploy <- newdata
-newdata.unemploy$EmployStat <- as.factor(2)
-newdata.unemploy$JobCat <- as.factor(-1)
+#Person 1, but (fem) unemployed
+newdata.funemploy <- newdata
+newdata.funemploy$EmployStat <- as.factor(2)
+newdata.funemploy$JobCat <- as.factor(-1)
 
-#Person 1 but male
+#Person 1, but male (employed)
 newdata.male <- newdata
 newdata.male$TESEX <- "Male"
 
-
-#Person 2: unmarried woman 25 yo, not in school, no kids, living alone, income =12, region = northwest
-#works in healthcare
-newdata2 <- newdata
-newdata2$TEAGE <- 25
-newdata2$HRNUMHOU <- 1
-newdata2$JobCat <- as.factor(10) #Healthcare practitioner and technical occupations
-newdata2$EmployStat <- as.factor(1) #employed
-newdata2$Married <- FALSE
-newdata2$HIncome <- as.factor(12) #$50,000 to $59,999
-newdata2$Region <- as.factor(1) #northwest
-
-#Person 2, but unemployed
-newdata2.unemploy <- newdata2
-newdata2.unemploy$EmployStat <- as.factor(2)
-newdata2.unemploy$JobCat <- as.factor(-1)
-
-#Person 2 but male
-newdata2.male <- newdata2
-newdata2.male$TESEX <- "Male"
+#Person 1, but male unemployed
+newdata.munemploy <- newdata.funemploy
+newdata.munemploy$TESEX <- "Male"
 
 
-#Person 3: married man, 4 person household, has kid, no elder, region = midwest
-newdata3 <- newdata
-newdata3$TEAGE <- 35
-newdata3$TESEX <- "Male"
-newdata3$HUnder13 <- TRUE
-newdata3$HRNUMHOU <- 4
-newdata3$JobCat <- as.factor(17) #Office and administrative support occupations 
-newdata3$HUnder18 <- TRUE
-newdata3$Region <- as.factor(2) #midwest
+#Person 1 dif ages
+newdata.15 <- newdata
+newdata.15$TEAGE <- 15
+newdata.25 <- newdata
+newdata.25$TEAGE <- 25
+newdata.35 <- newdata
+newdata.35$TEAGE <- 35
+newdata.45 <- newdata
+newdata.45$TEAGE <- 45
+newdata.55 <- newdata
+newdata.55$TEAGE <- 55
+newdata.65 <- newdata
+newdata.65$TEAGE <- 65
+newdata.75 <- newdata
+newdata.75$TEAGE <- 75
+newdata.85 <- newdata
+newdata.85$TEAGE <- 85
 
-#Person 3, but unemployed
-newdata3.unemploy <- newdata3
-newdata3.unemploy$EmployStat <- as.factor(2)
-newdata3.unemploy$JobCat <- as.factor(-1)
 
-#Person 3 but female
-newdata3.female <- newdata3
-newdata3.female$TESEX <- "Female"
+#Person 1 dif regions
+newdata.nwest <- newdata
+newdata.nwest$Region <- as.factor(1) #northwest
+newdata.mwest <- newdata
+newdata.mwest$Region <- as.factor(2) #midwest
+newdata.south <- newdata
+newdata.south$Region <- as.factor(3) #south
 
 
-#Person 4: married man 4 person, yes kid, yes elder, region = south, income = 
-newdata4 <- newdata3
-newdata2$TEAGE <- 55
-newdata4$HOver65 <- TRUE
-newdata4$JobCat <- as.factor(22) #Transportation and material moving occupations
-newdata4$HIncome <- as.factor(13) #$60,000 to $74,999
-newdata4$Region <- as.factor(4) #west
-
-#Person 4, but unemployed
-newdata4.unemploy <- newdata4
-newdata4.unemploy$EmployStat <- as.factor(2)
-newdata4.unemploy$JobCat <- as.factor(-1)
-
-#Person 4 but female
-newdata4.female <- newdata4
-newdata4.female$TESEX <- "Female"
-
+#Person 1 dif job categories
+newdata.j17 <- newdata
+newdata.j17$JobCat <- as.factor(17) #Office and administrative support occupations
+newdata.j16 <- newdata
+newdata.j16$JobCat <- as.factor(16) #Sales and related occupations
+newdata.j8 <- newdata
+newdata.j8$JobCat <- as.factor(8) #Educational instruction and library occupations
+newdata.j10 <- newdata
+newdata.j10$JobCat <- as.factor(10) #Healthcare practitioner and technical occupations
+newdata.j2 <- newdata
+newdata.j2$JobCat <- as.factor(2) #Business and financial operations occupations
+newdata.j19 <- newdata
+newdata.j19$JobCat <- as.factor(19) #Construction and extraction occupations
 
 
 ### Plot final model on new datasets ###
 
-#Plot on all data points
-plot(d_date$Days, d_date$MedHrs, xlab = "Days since January 1, 2023", ylab = "Hours spent outside")
+#Plot on all data points (test if there's a skip)
+plot(d_date$TUDIARYDATE[d_date$TUDIARYDATE < "2020-06-01" & d_date$TUDIARYDATE > "2020-03-01"], d_date$MedHrs[d_date$TUDIARYDATE < "2020-06-01" & d_date$TUDIARYDATE > "2020-03-01"], xlab = "Days since January 1, 2023", ylab = "Hours spent outside")
 points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), col = "lightblue", type = "l")
-points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.unemployed), col = "red", type = "l")
-
-### Plot for Unemployment
-#person 1
-par(las=1)
-plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), col = "paleturquoise3", type = "l", 
-     ylim = c(0, 14), lwd = 2, xlab = "Year", ylab = "Hours spent outside", 
-     main = "Hours spent outside for Employed vs Unemployed, Since 2003")
-points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.unemploy), col = "paleturquoise3", type = "l", lty = 2, lwd = 2)
-#person 2
-points(newdata2$TUDIARYDATE, predict(lm.int2, newdata = newdata2), col = "salmon", type = "l", ylim = c(0, 14), lwd = 2)
-points(newdata2$TUDIARYDATE, predict(lm.int2, newdata = newdata2.unemploy), col = "salmon", type = "l", lty = 2, lwd = 2)
-#person 3
-points(newdata3$TUDIARYDATE, predict(lm.int2, newdata = newdata3), col = "orchid3", type = "l", ylim = c(0, 14), lwd = 2)
-points(newdata3$TUDIARYDATE, predict(lm.int2, newdata = newdata3.unemploy), col = "orchid3", type = "l", lty = 2, lwd = 2)
-#person 4
-points(newdata4$TUDIARYDATE, predict(lm.int2, newdata = newdata4), col = "sandybrown", type = "l", ylim = c(0, 14), lwd = 2)
-points(newdata4$TUDIARYDATE, predict(lm.int2, newdata = newdata4.unemploy), col = "sandybrown", type = "l", lty = 2, lwd = 2)
-legend(x="topright", legend=c("Person 1","Person 2", "Person 3", "Person 4", "Employed", "Unemployed"), 
-       col=c("paleturquoise3","salmon", "orchid3", "sandybrown", "black", "black"), 
-       lwd=2, lty=c(1,1,1,1,1,2), cex = 0.5)
+#points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.unemployed), col = "red", type = "l")
 
 
-###Plot for Sex
-#person 1
+### Prediction Interval for Person 1
+pred.interval <- predict(lm.int2, newdata = newdata, interval = "prediction", se = TRUE, level = 0.9)
+
+plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), type = "l", ylim = c(0, 19), 
+     xlab = "Year", ylab = "Hours spent outside", main = "Hours spent outside for an average person, with prediction interval")
+polygon(x = c(newdata$TUDIARYDATE, rev(newdata$TUDIARYDATE)),
+        y = c(pred.interval$fit[,2], rev(pred.interval$fit[,3])),
+        col =  adjustcolor("dodgerblue", alpha.f = 0.20), border = NA)
+
+
+### Plot for Unemployment and Sex
+#Employed
 par(las=1)
 plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), col = "paleturquoise3", type = "l", 
      ylim = c(0, 14), lwd = 1, xlab = "Year", ylab = "Hours spent outside", 
-     main = "Hours spent outside for Female vs Male, Since 2003")
+     main = "Hours spent outside for Employed vs Unemployed & Female vs Male")
 points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.male), col = "paleturquoise3", type = "l", lty = 2, lwd = 1)
-#person 2
-points(newdata2$TUDIARYDATE, predict(lm.int2, newdata = newdata2), col = "salmon", type = "l", ylim = c(0, 14), lwd = 1)
-points(newdata2$TUDIARYDATE, predict(lm.int2, newdata = newdata2.male), col = "salmon", type = "l", lty = 2, lwd = 1)
-#person 3
-points(newdata3$TUDIARYDATE, predict(lm.int2, newdata = newdata3.female), col = "orchid3", type = "l", ylim = c(0, 14), lwd = 1)
-points(newdata3$TUDIARYDATE, predict(lm.int2, newdata = newdata3), col = "orchid3", type = "l", lty = 2, lwd = 1)
-#person 4
-points(newdata4$TUDIARYDATE, predict(lm.int2, newdata = newdata4.female), col = "sandybrown", type = "l", ylim = c(0, 14), lwd = 1)
-points(newdata4$TUDIARYDATE, predict(lm.int2, newdata = newdata4), col = "sandybrown", type = "l", lty = 2, lwd = 1)
-legend(x="topright", legend=c("Person 1","Person 2", "Person 3", "Person 4", "Female", "Male"), 
-       col=c("paleturquoise3","salmon", "orchid3", "sandybrown", "black", "black"), 
-       lwd=1, lty=c(1,1,1,1,1,2), cex = 0.5)
+#Unemployed
+points(newdata.funemploy$TUDIARYDATE, predict(lm.int2, newdata = newdata.funemploy), col = "salmon", type = "l", ylim = c(0, 14), lwd = 1)
+points(newdata.munemploy$TUDIARYDATE, predict(lm.int2, newdata = newdata.munemploy), col = "salmon", type = "l", lty = 2, lwd = 1)
+legend(x="topright", legend=c("Employed","Unemployed", "Female", "Male"), 
+       col=c("paleturquoise3","salmon", "black", "black"), 
+       lwd=1, lty=c(1,1,1,2), cex = 0.5)
 
 
-###Plot for Age
-
-
-
-###Plot for Region
-
-
-
-#Plot for Job Category
-
-
-
-
-
-
-
+### Plot for Unemployment and Sex TRIAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+lm.trial <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek + 
+              PostCovid:EmployStat, data = d)
+#Employed
+par(las=1)
+plot(newdata$TUDIARYDATE, predict(lm.trial, newdata = newdata), col = "paleturquoise3", type = "l", 
+     ylim = c(0, 14), lwd = 1, xlab = "Year", ylab = "Hours spent outside", 
+     main = "Hours spent outside for Employed vs Unemplyed 
+     and Female vs Male, Since 2003")
+points(newdata$TUDIARYDATE, predict(lm.trial, newdata = newdata.male), col = "paleturquoise3", type = "l", lty = 2, lwd = 1)
+#Unemployed
+points(newdata.funemploy$TUDIARYDATE, predict(lm.trial, newdata = newdata.funemploy), col = "salmon", type = "l", ylim = c(0, 14), lwd = 1)
+points(newdata.munemploy$TUDIARYDATE, predict(lm.trial, newdata = newdata.munemploy), col = "salmon", type = "l", lty = 2, lwd = 1)
+legend(x="topright", legend=c("Employed","Unemployed", "Female", "Male"), 
+       col=c("paleturquoise3","salmon", "black", "black"), 
+       lwd=1, lty=c(1,1,1,2), cex = 0.5)
 
 
 
-#make final picture have x axis be date
-#include uncertainty: eg prediction shaded region around it.
-#polygon: x and y coords of a region to fill it in . (x: days going forward than same going backwards. Same w y)
-#predict interval = predict
+### Plot for Age
+#every 10 years
+par(las=1)
+plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.15), col = "#e641b6", type = "l", 
+     ylim = c(0, 14), lwd = 1, xlab = "Year", ylab = "Hours spent outside", 
+     main = "Hours spent outside for Different Ages")
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.25), col = "#e50000", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.35), col = "#ec894d", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.45), col = "#f0cc2e", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.55), col = "#3ea908", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.65), col = "#41b6e6", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.75), col = "#0057e5", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.85), col = "#003b5c", type = "l", lwd = 1)
+legend(x="topright", legend=c("15 y.o","25 y.o", "35 y.o", "45 y.o", "55 y.o", "65 y.o", "75 y.o", "85 y.o"), 
+       col=c("#e641b6","#e50000", "#ec894d", "#f0cc2e", "#3ea908", "#41b6e6", "#0057e5", "#003b5c"), 
+       lwd=1, lty=c(1,1,1,1,1,1,1,1), cex = 0.5)
 
 
+
+### Plot for Region
+par(las=1)
+plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.nwest), col = "#540d6e", type = "l", 
+     ylim = c(0, 14), lwd = 1, xlab = "Year", ylab = "Hours spent outside", 
+     main = "Hours spent outside for Different Regions")
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.mwest), col = "#d8315b", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.south), col = "#ffd23f", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), col = "#3e92cc", type = "l", lwd = 1)
+legend(x="topright", legend=c("Northwest","Midwest", "South", "West"), 
+       col=c("#540d6e","#d8315b", "#ffd23f", "#3e92cc"), 
+       lwd=1, lty=c(1,1,1,1), cex = 0.5)
+
+
+
+### Plot for Job Category
+#most common 7 + Unemployed
+par(las=1)
+plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), col = "#e641b6", type = "l", 
+     ylim = c(0, 14), lwd = 1, xlab = "Year", ylab = "Hours spent outside", 
+     main = "Hours spent outside for Different Job Categories")
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j17), col = "#e50000", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j16), col = "#ec894d", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j8), col = "#f0cc2e", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j10), col = "#3ea908", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j2), col = "#41b6e6", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j19), col = "#0057e5", type = "l", lwd = 1)
+points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.funemploy), col = "black", type = "l", lwd = 1)
+legend(x="topleft", legend=c("Management", "Office","Sales", "Education", "Healthcare", "Business", "Construction", "Unemployed"), 
+       col=c("#e641b6","#e50000", "#ec894d", "#f0cc2e", "#3ea908", "#41b6e6", "#0057e5", "black"), 
+       lwd=1, lty=c(1,1,1,1,1,1,1, 1), cex = 0.5)
 
 
 
