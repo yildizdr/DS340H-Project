@@ -421,9 +421,6 @@ lm.nocovhinc <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + HUnder13 +
                      Region, data = d)
 anova(lm.nocovid, lm.nocovhinc) #sig
 
-#Residual plot
-scatter.smooth(residuals(lm.int2)~predict(lm.int2), xlab= "Y.hat", ylab= "Residuals")
-
 
 
 ### Final Model vs Final model without covid 
@@ -432,36 +429,53 @@ anova(lm.int2, lm.nocovid)
 #Pvalue = 0 means we can reject the simpler model
 
 
-### Hypothesis Test for 2019 vs 2023
-#could ask model what it would predict if there wasn't covid. what the previous trend would predict.
-#refit model up until march 2020, make predictions for now. 
-#can omit mar 2020-nov 23: see if covid predictor is significant.
 
-d_precovid <- d[d$TUDIARYDATE < "2020-03-01" | d$TUDIARYDATE > "2023-11-30",]
+### Test for 2019 vs 2023: Has the amount of time people spend outside returned to pre-pandemic levels?
 
-lm.precovid2 <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+#Omit mar 2020 - nov 2023: see if covid predictor is significant
+d_precovid_dec <- d[d$TUDIARYDATE < "2020-03-01" | d$TUDIARYDATE > "2023-11-30",]
+
+lm.precovid_dec2 <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
                 HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
                 Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
                 Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
-                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d_precovid)
-lm.precovid <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + 
-                    HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
-                    Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
-                    Region, data = d_precovid)
-summary(lm.precovid)
+                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d_precovid_dec)
+lm.precovid_dec <- lm(formula = TotalHrs ~ TEAGE + TESEX + HOver65 + 
+                  HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                  Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                  Region, data = d_precovid_dec) #you have to include covid predictors, bc if you don't you're forcing it to have the same trend
+anova(lm.precovid_dec2, lm.precovid_dec)
+#p is sig. we're not back. 
+#the fact that in december it's lower, means that post-covid is sig, despite removing all those days
+#it has not returned to pre-covid levels
 
+plot(newdata$TUDIARYDATE, predict(lm.precovid_dec, newdata = newdata), type = "l", ylim = c(0, 19))
+points(newdata$TUDIARYDATE, predict(lm.precovid_dec2, newdata = newdata), type = "l", ylim = c(0, 19), lty = 2)
+
+
+
+#To answer "to what extent have we not returned back to pre-pandemic levels": 
+#model fit only on precovid, compared to actual model. this is the viz you want to show
+d_precovid <- d[d$TUDIARYDATE < "2020-03-01",]
+lm.precovid <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
+                  HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
+                  Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
+                  Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
+                  PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek, data = d_precovid)
+
+#Plot actual predictions vs what it would have been if we continued the trend from pre-covid:
 plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), type = "l", ylim = c(0, 19))
-#points(newdata$TUDIARYDATE, predict(lm.nocovid, newdata = newdata), type = "l", ylim = c(0, 19))
 points(newdata$TUDIARYDATE, predict(lm.precovid, newdata = newdata), type = "l", ylim = c(0, 19), lty = 2)
 
-
-plot(newdata$TUDIARYDATE, predict(lm.precovid2, newdata = newdata), type = "l", ylim = c(0, 19), lty = 2)
-#plot(newdata$TUDIARYDATE[newdata$TUDIARYDATE > "2023-11-30"], predict(lm.precovid, newdata = newdata[newdata$TUDIARYDATE > "2023-11-30",]), type = "l", ylim = c(0, 19), lty = 2)
-
-
+#Get the difference of pre-covid predictions vs actual predictions for 27 Dec 2023 for avg person:
+hrs_dif <- predict(lm.precovid, newdata = newdata[newdata$TUDIARYDATE == "2023-12-27",]) - 
+  predict(lm.int2, newdata = newdata[newdata$TUDIARYDATE == "2023-12-27",]) #1.37 hrs less
 
 
-############## Draw Model Predictions ###############
+
+
+
+######################### Draw Model Predictions ##########################
 
 ### Create new datasets for predictions ###
 
@@ -635,6 +649,8 @@ legend(x="topright", legend=c("Northwest","Midwest", "South", "West"),
 ### Plot for Job Category
 #most common 7 + Unemployed
 par(las=1)
+#par(xpd=T, mar=par()$mar+c(0,0,0,6))
+#par(mar = c(3, 3, 3, 5.5), xpd = TRUE) 
 plot(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata), col = "#e641b6", type = "l", 
      ylim = c(0, 14), lwd = 1, xlab = "Year", ylab = "Hours spent outside", 
      main = "Hours spent outside for Different Job Categories")
@@ -645,11 +661,13 @@ points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j10), col = "#3ea
 points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j2), col = "#41b6e6", type = "l", lwd = 1)
 points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.j19), col = "#0057e5", type = "l", lwd = 1)
 points(newdata$TUDIARYDATE, predict(lm.int2, newdata = newdata.funemploy), col = "black", type = "l", lwd = 1)
-legend(x="topleft", legend=c("Management", "Office","Sales", "Education", "Healthcare", "Business", "Construction", "Unemployed"), 
-       col=c("#e641b6","#e50000", "#ec894d", "#f0cc2e", "#3ea908", "#41b6e6", "#0057e5", "black"), 
+
+legend("topright", inset = c(-0.2, 0.1), legend=c("Construction", "Healthcare","Sales", "Office", "Management", "Education", "Business", "Unemployed"), 
+       col=c("#0057e5","#3ea908", "#ec894d", "#e50000", "#e641b6", "#f0cc2e", "#41b6e6", "black"), 
        lwd=1, lty=c(1,1,1,1,1,1,1, 1), cex = 0.5)
 
-
+# Restore default clipping rect
+par(mar=c(5, 4, 4, 2) + 0.1)
 
 
 

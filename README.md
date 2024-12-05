@@ -6,3 +6,5 @@ Investigate the impact of the Covid-19 pandemic and other factors on the amount 
 2. What factors are related to the amount of time a person spends outside of their home? 
 
 Note: “Outside” means outside of the person’s own home or yard.
+
+Data files: https://www.bls.gov/tus/data/datafiles-0323.htm
