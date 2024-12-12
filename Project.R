@@ -590,28 +590,6 @@ legend(x="topright", legend=c("Employed","Unemployed", "Female", "Male"),
        lwd=1, lty=c(1,1,1,2), cex = 0.5)
 
 
-### Plot for Unemployment and Sex TRIAL !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-lm.trial <- lm(formula = TotalHrs ~ TEAGE + PostCovid + TESEX + HOver65 + 
-                HUnder13 + HRNUMHOU + JobCat + HUnder18 + School + EmployStat + 
-                Married + HIncome + Month + Days + Days2 + Season + DayofWeek + 
-                Region + TEAGE:PostCovid + PostCovid:HRNUMHOU + PostCovid:JobCat + 
-                PostCovid:Days + PostCovid:Days2 + PostCovid:DayofWeek + 
-              PostCovid:EmployStat, data = d)
-#Employed
-par(las=1)
-plot(newdata$TUDIARYDATE, predict(lm.trial, newdata = newdata), col = "paleturquoise3", type = "l", 
-     ylim = c(0, 14), lwd = 1, xlab = "Year", ylab = "Hours spent outside", 
-     main = "Hours spent outside for Employed vs Unemplyed 
-     and Female vs Male, Since 2003")
-points(newdata$TUDIARYDATE, predict(lm.trial, newdata = newdata.male), col = "paleturquoise3", type = "l", lty = 2, lwd = 1)
-#Unemployed
-points(newdata.funemploy$TUDIARYDATE, predict(lm.trial, newdata = newdata.funemploy), col = "salmon", type = "l", ylim = c(0, 14), lwd = 1)
-points(newdata.munemploy$TUDIARYDATE, predict(lm.trial, newdata = newdata.munemploy), col = "salmon", type = "l", lty = 2, lwd = 1)
-legend(x="topright", legend=c("Employed","Unemployed", "Female", "Male"), 
-       col=c("paleturquoise3","salmon", "black", "black"), 
-       lwd=1, lty=c(1,1,1,2), cex = 0.5)
-
-
 
 ### Plot for Age
 #every 10 years
